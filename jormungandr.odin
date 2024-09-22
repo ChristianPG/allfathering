@@ -1,10 +1,15 @@
 package jormungandr
 
 import "core:fmt"
+import "core:math/rand"
 import rl "vendor:raylib"
 
 // Types
 Vec2i :: [2]int
+Food :: struct {
+	position: Vec2i,
+	eaten:    bool,
+}
 
 // Global Constants
 WINDOW_SIZE :: 500
@@ -24,16 +29,42 @@ move_direction: Vec2i
 jormungandr: [MAX_SNAKE_LENGTH]Vec2i = {}
 jormungandr_current_length: int
 game_over := false
+food: Food
+
+place_new_food :: proc() {
+	occupied: [GRID_WIDTH][GRID_WIDTH]bool
+
+	for i in 0 ..< jormungandr_current_length {
+		occupied[jormungandr[i].x][jormungandr[i].y] = true
+	}
+
+	// NOTE: temp_allocator mark the memory used by free_cells to be removed later
+	free_cells := make([dynamic]Vec2i, context.temp_allocator)
+
+	for x in 0 ..< GRID_WIDTH {
+		for y in 0 ..< GRID_WIDTH {
+			if !occupied[x][y] {
+				append(&free_cells, Vec2i{x, y})
+			}
+		}
+	}
+
+	if len(free_cells) > 0 {
+		random_cell_index := rl.GetRandomValue(0, i32(len(free_cells)) - 1)
+		food = {
+			position = free_cells[random_cell_index],
+			eaten    = false,
+		}
+	}
+}
 
 restart :: proc() {
 	start_head_position := Vec2i{GRID_WIDTH / 2, GRID_WIDTH / 2}
 	jormungandr[0] = start_head_position
-	jormungandr[1] = start_head_position - {0, 1}
-	jormungandr[1] = start_head_position - {0, 2}
-	jormungandr[1] = start_head_position - {0, 3}
-	jormungandr_current_length = 4
+	jormungandr_current_length = 1
 	move_direction = {0, 0}
 	game_over = false
+	place_new_food()
 }
 
 main :: proc() {
@@ -71,11 +102,18 @@ main :: proc() {
 		if tick_timer <= 0 {
 			previous_part_position := jormungandr[0]
 			jormungandr[0] += move_direction
+			horizontal_position_of_head := jormungandr[0].x
+			vertical_position_of_head := jormungandr[0].y
 			game_over =
-				jormungandr[0].x < 0 ||
-				jormungandr[0].x >= GRID_WIDTH ||
-				jormungandr[0].y < 0 ||
-				jormungandr[0].y >= GRID_WIDTH
+				horizontal_position_of_head < 0 ||
+				horizontal_position_of_head >= GRID_WIDTH ||
+				vertical_position_of_head < 0 ||
+				vertical_position_of_head >= GRID_WIDTH
+			if !food.eaten {
+				food.eaten =
+					food.position.x == horizontal_position_of_head &&
+					food.position.y == vertical_position_of_head
+			}
 
 			if game_over {
 				jormungandr[0] = previous_part_position
@@ -99,6 +137,21 @@ main :: proc() {
 		}
 		rl.BeginMode2D(camera)
 
+		// NOTE: Render the food
+		if !food.eaten {
+			head_rect := rl.Rectangle {
+				f32(food.position.x * CELL_SIZE),
+				f32(food.position.y * CELL_SIZE),
+				CELL_SIZE,
+				CELL_SIZE,
+			}
+			rl.DrawRectangleRec(head_rect, rl.PINK)
+		} else {
+			place_new_food()
+			jormungandr[jormungandr_current_length] = jormungandr[jormungandr_current_length - 1]
+			jormungandr_current_length += 1
+		}
+
 		// NOTE: One way of writing a for loop
 		for index in 0 ..< jormungandr_current_length {
 			// NOTE: Create a new rectangle to render it in the initial position
@@ -118,6 +171,8 @@ main :: proc() {
 
 		rl.EndMode2D()
 		rl.EndDrawing()
+
+		free_all(context.temp_allocator)
 	}
 
 	rl.CloseWindow()
