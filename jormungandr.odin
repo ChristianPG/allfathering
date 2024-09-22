@@ -23,47 +23,71 @@ tick_timer: f32 = TICK_RATE
 move_direction: Vec2i
 jormungandr: [MAX_SNAKE_LENGTH]Vec2i = {}
 jormungandr_current_length: int
+game_over := false
+
+restart :: proc() {
+	start_head_position := Vec2i{GRID_WIDTH / 2, GRID_WIDTH / 2}
+	jormungandr[0] = start_head_position
+	jormungandr[1] = start_head_position - {0, 1}
+	jormungandr[1] = start_head_position - {0, 2}
+	jormungandr[1] = start_head_position - {0, 3}
+	jormungandr_current_length = 4
+	move_direction = {0, 0}
+	game_over = false
+}
 
 main :: proc() {
 	// NOTE: Activates vsync so the game does not refresh faster than the monitor
 	rl.SetConfigFlags({.VSYNC_HINT})
 
-	start_head_position := Vec2i{GRID_WIDTH / 2, GRID_WIDTH / 2}
-	jormungandr[0] = start_head_position
-	jormungandr[1] = start_head_position - {0, 1}
-	jormungandr_current_length = 2
-	move_direction = {0, 0}
+	restart()
 
 	// NOTE: Opens a new window with the specified size
 	rl.InitWindow(WINDOW_SIZE, WINDOW_SIZE, "Jörmungandr")
 
 	// NOTE: The game will keep running until the window is closed
 	for !rl.WindowShouldClose() {
-		if rl.IsKeyDown(.UP) && move_direction != DOWN_DIRECTION {
-			move_direction = {0, -1}
-		}
-		if rl.IsKeyDown(.DOWN) && move_direction != UP_DIRECTION {
-			move_direction = {0, 1}
-		}
-		if rl.IsKeyDown(.RIGHT) && move_direction != LEFT_DIRECTION {
-			move_direction = {1, 0}
-		}
-		if rl.IsKeyDown(.LEFT) && move_direction != RIGHT_DIRECTION {
-			move_direction = {-1, 0}
+		if game_over {
+			if rl.IsKeyPressed(.ENTER) {
+				restart()
+			}
+		} else {
+			if rl.IsKeyDown(.UP) && move_direction != DOWN_DIRECTION {
+				move_direction = {0, -1}
+			}
+			if rl.IsKeyDown(.DOWN) && move_direction != UP_DIRECTION {
+				move_direction = {0, 1}
+			}
+			if rl.IsKeyDown(.RIGHT) && move_direction != LEFT_DIRECTION {
+				move_direction = {1, 0}
+			}
+			if rl.IsKeyDown(.LEFT) && move_direction != RIGHT_DIRECTION {
+				move_direction = {-1, 0}
+			}
+			// NOTE: Delays the new position setting to make the movement visible
+			tick_timer -= rl.GetFrameTime()
 		}
 
-		// NOTE: Delays the new position setting to make the movement visible
-		tick_timer -= rl.GetFrameTime()
 		if tick_timer <= 0 {
 			previous_part_position := jormungandr[0]
 			jormungandr[0] += move_direction
-			// NOTE: One way of writing a for loop
-			for index := 1; index < jormungandr_current_length; index += 1 {
-				current_body_part := jormungandr[index]
-				jormungandr[index] = previous_part_position
-				previous_part_position = current_body_part
+			game_over =
+				jormungandr[0].x < 0 ||
+				jormungandr[0].x >= GRID_WIDTH ||
+				jormungandr[0].y < 0 ||
+				jormungandr[0].y >= GRID_WIDTH
+
+			if game_over {
+				jormungandr[0] = previous_part_position
+			} else {
+				// NOTE: One way of writing a for loop
+				for index := 1; index < jormungandr_current_length; index += 1 {
+					current_body_part := jormungandr[index]
+					jormungandr[index] = previous_part_position
+					previous_part_position = current_body_part
+				}
+				tick_timer = TICK_RATE + tick_timer
 			}
-			tick_timer = TICK_RATE + tick_timer
 		}
 
 		rl.BeginDrawing()
@@ -85,6 +109,11 @@ main :: proc() {
 				CELL_SIZE,
 			}
 			rl.DrawRectangleRec(head_rect, rl.WHITE)
+		}
+
+		if game_over {
+			rl.DrawText("GAME OVER", 4, 4, 25, rl.RED)
+			rl.DrawText("Press Enter to play again", 4, 30, 15, rl.BLACK)
 		}
 
 		rl.EndMode2D()
