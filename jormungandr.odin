@@ -61,7 +61,12 @@ place_new_food :: proc() {
 restart :: proc() {
 	start_head_position := Vec2i{GRID_WIDTH / 2, GRID_WIDTH / 2}
 	jormungandr[0] = start_head_position
-	jormungandr_current_length = 1
+	// NOTE: For testing
+	// jormungandr[1] = start_head_position - {1, 0}
+	// jormungandr[2] = start_head_position - {2, 0}
+	// jormungandr[3] = start_head_position - {3, 0}
+	// jormungandr[4] = start_head_position - {4, 0}
+	jormungandr_current_length = 5
 	move_direction = {0, 0}
 	game_over = false
 	place_new_food()
@@ -123,6 +128,11 @@ main :: proc() {
 					current_body_part := jormungandr[index]
 					jormungandr[index] = previous_part_position
 					previous_part_position = current_body_part
+					if current_body_part.x == jormungandr[0].x &&
+					   current_body_part.y == jormungandr[0].y {
+						game_over = true
+						break
+					}
 				}
 				tick_timer = TICK_RATE + tick_timer
 			}
@@ -161,7 +171,7 @@ main :: proc() {
 				CELL_SIZE,
 				CELL_SIZE,
 			}
-			rl.DrawRectangleRec(head_rect, rl.WHITE)
+			rl.DrawRectangleRec(head_rect, index == 0 ? rl.RED : rl.WHITE)
 		}
 
 		if game_over {
