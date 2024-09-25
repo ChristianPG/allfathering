@@ -1,7 +1,7 @@
 package jormungandr
 
 import "core:fmt"
-import "core:math/rand"
+import "core:math"
 import rl "vendor:raylib"
 
 // Types
@@ -16,7 +16,8 @@ WINDOW_SIZE :: 500
 GRID_WIDTH :: 20
 CELL_SIZE :: 16
 CANVAS_SIZE :: GRID_WIDTH * CELL_SIZE
-TICK_RATE :: 0.13
+// NOTE: Decrease the tick rate to make Jormungandr faster
+TICK_RATE :: 0.1
 MAX_SNAKE_LENGTH :: GRID_WIDTH * GRID_WIDTH
 UP_DIRECTION :: Vec2i{0, -1}
 DOWN_DIRECTION :: Vec2i{0, 1}
@@ -30,6 +31,17 @@ jormungandr: [MAX_SNAKE_LENGTH]Vec2i = {}
 jormungandr_current_length: int
 game_over := false
 food: Food
+
+render_sprite :: proc(sprite: rl.Texture2D, position: Vec2i, rotation: f32 = 0) {
+	source := rl.Rectangle{0, 0, f32(sprite.width), f32(sprite.height)}
+	dest := rl.Rectangle {
+		f32(position.x) * CELL_SIZE + 0.5 * CELL_SIZE,
+		f32(position.y) * CELL_SIZE + 0.5 * CELL_SIZE,
+		CELL_SIZE,
+		CELL_SIZE,
+	}
+	rl.DrawTexturePro(sprite, source, dest, {CELL_SIZE, CELL_SIZE} * 0.5, rotation, rl.WHITE)
+}
 
 place_new_food :: proc() {
 	occupied: [GRID_WIDTH][GRID_WIDTH]bool
@@ -61,13 +73,13 @@ place_new_food :: proc() {
 restart :: proc() {
 	start_head_position := Vec2i{GRID_WIDTH / 2, GRID_WIDTH / 2}
 	jormungandr[0] = start_head_position
+	jormungandr[1] = start_head_position - {1, 0}
 	// NOTE: For testing
-	// jormungandr[1] = start_head_position - {1, 0}
 	// jormungandr[2] = start_head_position - {2, 0}
 	// jormungandr[3] = start_head_position - {3, 0}
 	// jormungandr[4] = start_head_position - {4, 0}
-	jormungandr_current_length = 5
-	move_direction = {0, 0}
+	jormungandr_current_length = 2
+	move_direction = {1, 0}
 	game_over = false
 	place_new_food()
 }
@@ -75,11 +87,16 @@ restart :: proc() {
 main :: proc() {
 	// NOTE: Activates vsync so the game does not refresh faster than the monitor
 	rl.SetConfigFlags({.VSYNC_HINT})
+	// NOTE: Opens a new window with the specified size
+	rl.InitWindow(WINDOW_SIZE, WINDOW_SIZE, "Jörmungandr")
 
 	restart()
 
-	// NOTE: Opens a new window with the specified size
-	rl.InitWindow(WINDOW_SIZE, WINDOW_SIZE, "Jörmungandr")
+	// NOTE: This has to be done after initializing the window to avoid segmentation faults 
+	food_sprite := rl.LoadTexture("assets/food.png")
+	head_sprite := rl.LoadTexture("assets/head.png")
+	body_sprite := rl.LoadTexture("assets/body.png")
+	tail_sprite := rl.LoadTexture("assets/tail.png")
 
 	// NOTE: The game will keep running until the window is closed
 	for !rl.WindowShouldClose() {
@@ -149,13 +166,7 @@ main :: proc() {
 
 		// NOTE: Render the food
 		if !food.eaten {
-			head_rect := rl.Rectangle {
-				f32(food.position.x * CELL_SIZE),
-				f32(food.position.y * CELL_SIZE),
-				CELL_SIZE,
-				CELL_SIZE,
-			}
-			rl.DrawRectangleRec(head_rect, rl.PINK)
+			render_sprite(food_sprite, food.position)
 		} else {
 			place_new_food()
 			jormungandr[jormungandr_current_length] = jormungandr[jormungandr_current_length - 1]
@@ -164,14 +175,27 @@ main :: proc() {
 
 		// NOTE: One way of writing a for loop
 		for index in 0 ..< jormungandr_current_length {
-			// NOTE: Create a new rectangle to render it in the initial position
-			head_rect := rl.Rectangle {
-				f32(jormungandr[index].x * CELL_SIZE),
-				f32(jormungandr[index].y * CELL_SIZE),
-				CELL_SIZE,
-				CELL_SIZE,
+			// Create a new rectangle to render it in the initial position
+			// head_rect := rl.Rectangle {
+			// 	f32(jormungandr[index].x * CELL_SIZE),
+			// 	f32(jormungandr[index].y * CELL_SIZE),
+			// 	CELL_SIZE,
+			// 	CELL_SIZE,
+			// }
+			// rl.DrawRectangleRec(head_rect, index == 0 ? rl.RED : rl.WHITE)
+
+			part_sprite: rl.Texture2D = body_sprite
+			part_direction: Vec2i = jormungandr[index] - jormungandr[index + 1]
+
+			if index == 0 {
+				part_sprite = head_sprite
+			} else if index == jormungandr_current_length - 1 {
+				part_direction = jormungandr[index - 1] - jormungandr[index]
+				part_sprite = tail_sprite
 			}
-			rl.DrawRectangleRec(head_rect, index == 0 ? rl.RED : rl.WHITE)
+			rotation := math.atan2(f32(part_direction.y), f32(part_direction.x)) * math.DEG_PER_RAD
+
+			render_sprite(part_sprite, jormungandr[index], rotation)
 		}
 
 		if game_over {
@@ -179,11 +203,21 @@ main :: proc() {
 			rl.DrawText("Press Enter to play again", 4, 30, 15, rl.BLACK)
 		}
 
+		// NOTE: Substracting the initial length from the score
+		score := jormungandr_current_length - 2
+		score_str := fmt.ctprintf("Score: %v", score)
+		rl.DrawText(score_str, 4, CANVAS_SIZE - 14, 10, rl.GRAY)
+
 		rl.EndMode2D()
 		rl.EndDrawing()
 
 		free_all(context.temp_allocator)
 	}
+
+	rl.UnloadTexture(food_sprite)
+	rl.UnloadTexture(head_sprite)
+	rl.UnloadTexture(body_sprite)
+	rl.UnloadTexture(tail_sprite)
 
 	rl.CloseWindow()
 }
