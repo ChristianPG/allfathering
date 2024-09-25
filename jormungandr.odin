@@ -89,6 +89,7 @@ main :: proc() {
 	rl.SetConfigFlags({.VSYNC_HINT})
 	// NOTE: Opens a new window with the specified size
 	rl.InitWindow(WINDOW_SIZE, WINDOW_SIZE, "Jörmungandr")
+	rl.InitAudioDevice()
 
 	restart()
 
@@ -97,6 +98,9 @@ main :: proc() {
 	head_sprite := rl.LoadTexture("assets/head.png")
 	body_sprite := rl.LoadTexture("assets/body.png")
 	tail_sprite := rl.LoadTexture("assets/tail.png")
+
+	eating_sound := rl.LoadSound("assets/eat.wav")
+	crashing_sound := rl.LoadSound("assets/crash.wav")
 
 	// NOTE: The game will keep running until the window is closed
 	for !rl.WindowShouldClose() {
@@ -126,19 +130,21 @@ main :: proc() {
 			jormungandr[0] += move_direction
 			horizontal_position_of_head := jormungandr[0].x
 			vertical_position_of_head := jormungandr[0].y
-			game_over =
-				horizontal_position_of_head < 0 ||
-				horizontal_position_of_head >= GRID_WIDTH ||
-				vertical_position_of_head < 0 ||
-				vertical_position_of_head >= GRID_WIDTH
+
 			if !food.eaten {
 				food.eaten =
 					food.position.x == horizontal_position_of_head &&
 					food.position.y == vertical_position_of_head
 			}
 
-			if game_over {
+			if !game_over &&
+			   (horizontal_position_of_head < 0 ||
+					   horizontal_position_of_head >= GRID_WIDTH ||
+					   vertical_position_of_head < 0 ||
+					   vertical_position_of_head >= GRID_WIDTH) {
+				game_over = true
 				jormungandr[0] = previous_part_position
+				rl.PlaySound(crashing_sound)
 			} else {
 				// NOTE: One way of writing a for loop
 				for index := 1; index < jormungandr_current_length; index += 1 {
@@ -147,6 +153,7 @@ main :: proc() {
 					previous_part_position = current_body_part
 					if current_body_part.x == jormungandr[0].x &&
 					   current_body_part.y == jormungandr[0].y {
+						rl.PlaySound(crashing_sound)
 						game_over = true
 						break
 					}
@@ -171,6 +178,7 @@ main :: proc() {
 			place_new_food()
 			jormungandr[jormungandr_current_length] = jormungandr[jormungandr_current_length - 1]
 			jormungandr_current_length += 1
+			rl.PlaySound(eating_sound)
 		}
 
 		// NOTE: One way of writing a for loop
@@ -219,5 +227,9 @@ main :: proc() {
 	rl.UnloadTexture(body_sprite)
 	rl.UnloadTexture(tail_sprite)
 
+	rl.UnloadSound(eating_sound)
+	rl.UnloadSound(crashing_sound)
+
+	rl.CloseAudioDevice()
 	rl.CloseWindow()
 }
