@@ -31,9 +31,21 @@ jormungandr: [MAX_SNAKE_LENGTH]Vec2i = {}
 jormungandr_current_length: int
 game_over := false
 food: Food
+session_score: int
+alternate_slide: bool
 
-render_sprite :: proc(sprite: rl.Texture2D, position: Vec2i, rotation: f32 = 0) {
-	source := rl.Rectangle{0, 0, f32(sprite.width), f32(sprite.height)}
+render_sprite :: proc(
+	sprite: rl.Texture2D,
+	position: Vec2i,
+	rotation: f32 = 0,
+	should_flip_vertically: bool = false,
+) {
+	source := rl.Rectangle {
+		0,
+		0,
+		f32(sprite.width),
+		f32(sprite.height) * (should_flip_vertically ? -1 : 1),
+	}
 	dest := rl.Rectangle {
 		f32(position.x) * CELL_SIZE + 0.5 * CELL_SIZE,
 		f32(position.y) * CELL_SIZE + 0.5 * CELL_SIZE,
@@ -75,10 +87,11 @@ restart :: proc() {
 	jormungandr[0] = start_head_position
 	jormungandr[1] = start_head_position - {1, 0}
 	// NOTE: For testing
-	// jormungandr[2] = start_head_position - {2, 0}
-	// jormungandr[3] = start_head_position - {3, 0}
-	// jormungandr[4] = start_head_position - {4, 0}
-	jormungandr_current_length = 2
+	jormungandr[2] = start_head_position - {2, 0}
+	jormungandr[3] = start_head_position - {3, 0}
+	jormungandr[4] = start_head_position - {4, 0}
+	jormungandr[5] = start_head_position - {5, 0}
+	jormungandr_current_length = 6
 	move_direction = {1, 0}
 	game_over = false
 	place_new_food()
@@ -96,7 +109,9 @@ main :: proc() {
 	// NOTE: This has to be done after initializing the window to avoid segmentation faults 
 	food_sprite := rl.LoadTexture("assets/food.png")
 	head_sprite := rl.LoadTexture("assets/head.png")
-	body_sprite := rl.LoadTexture("assets/body.png")
+	body1_sprite := rl.LoadTexture("assets/body1.png")
+	body2_sprite := rl.LoadTexture("assets/body2.png")
+	left_down_corner_sprite := rl.LoadTexture("assets/left-down-corner.png")
 	tail_sprite := rl.LoadTexture("assets/tail.png")
 
 	eating_sound := rl.LoadSound("assets/eat.wav")
@@ -105,22 +120,27 @@ main :: proc() {
 	// NOTE: The game will keep running until the window is closed
 	for !rl.WindowShouldClose() {
 		if game_over {
-			if rl.IsKeyPressed(.ENTER) {
+			if rl.IsKeyPressed(.ENTER) ||
+			   rl.IsGamepadButtonPressed(0, .MIDDLE_LEFT) ||
+			   rl.IsGamepadButtonPressed(0, .MIDDLE_RIGHT) {
 				restart()
 			}
 		} else {
-			if rl.IsKeyDown(.UP) && move_direction != DOWN_DIRECTION {
+			if (rl.IsKeyPressed(.UP) || rl.IsGamepadButtonPressed(0, .LEFT_FACE_UP)) &&
+			   move_direction != DOWN_DIRECTION {
 				move_direction = {0, -1}
-			}
-			if rl.IsKeyDown(.DOWN) && move_direction != UP_DIRECTION {
+			} else if (rl.IsKeyPressed(.DOWN) || rl.IsGamepadButtonPressed(0, .LEFT_FACE_DOWN)) &&
+			   move_direction != UP_DIRECTION {
 				move_direction = {0, 1}
-			}
-			if rl.IsKeyDown(.RIGHT) && move_direction != LEFT_DIRECTION {
+			} else if (rl.IsKeyPressed(.RIGHT) ||
+				   rl.IsGamepadButtonPressed(0, .LEFT_FACE_RIGHT)) &&
+			   move_direction != LEFT_DIRECTION {
 				move_direction = {1, 0}
-			}
-			if rl.IsKeyDown(.LEFT) && move_direction != RIGHT_DIRECTION {
+			} else if (rl.IsKeyPressed(.LEFT) || rl.IsGamepadButtonPressed(0, .LEFT_FACE_LEFT)) &&
+			   move_direction != RIGHT_DIRECTION {
 				move_direction = {-1, 0}
 			}
+
 			// NOTE: Delays the new position setting to make the movement visible
 			tick_timer -= rl.GetFrameTime()
 		}
@@ -149,16 +169,17 @@ main :: proc() {
 				// NOTE: One way of writing a for loop
 				for index := 1; index < jormungandr_current_length; index += 1 {
 					current_body_part := jormungandr[index]
-					jormungandr[index] = previous_part_position
-					previous_part_position = current_body_part
-					if current_body_part.x == jormungandr[0].x &&
-					   current_body_part.y == jormungandr[0].y {
+					if previous_part_position.x == jormungandr[0].x &&
+					   previous_part_position.y == jormungandr[0].y {
 						rl.PlaySound(crashing_sound)
 						game_over = true
 						break
 					}
+					jormungandr[index] = previous_part_position
+					previous_part_position = current_body_part
 				}
 				tick_timer = TICK_RATE + tick_timer
+				alternate_slide = !alternate_slide
 			}
 		}
 
@@ -178,6 +199,7 @@ main :: proc() {
 			place_new_food()
 			jormungandr[jormungandr_current_length] = jormungandr[jormungandr_current_length - 1]
 			jormungandr_current_length += 1
+			session_score += 1
 			rl.PlaySound(eating_sound)
 		}
 
@@ -192,18 +214,43 @@ main :: proc() {
 			// }
 			// rl.DrawRectangleRec(head_rect, index == 0 ? rl.RED : rl.WHITE)
 
-			part_sprite: rl.Texture2D = body_sprite
+			part_sprite: rl.Texture2D = head_sprite
+			should_flip_vertically := false
 			part_direction: Vec2i = jormungandr[index] - jormungandr[index + 1]
 
-			if index == 0 {
-				part_sprite = head_sprite
-			} else if index == jormungandr_current_length - 1 {
+			if index == jormungandr_current_length - 1 {
 				part_direction = jormungandr[index - 1] - jormungandr[index]
 				part_sprite = tail_sprite
+			} else if index > 0 {
+				part_direction = jormungandr[index - 1] - jormungandr[index]
 			}
+
 			rotation := math.atan2(f32(part_direction.y), f32(part_direction.x)) * math.DEG_PER_RAD
 
-			render_sprite(part_sprite, jormungandr[index], rotation)
+			// TODO: Refactor the following logic to make it nicer
+			if 0 < index && index < (jormungandr_current_length - 1) {
+				previous_direction := jormungandr[index] - jormungandr[index + 1]
+				should_flip_vertically = false
+				part_sprite = left_down_corner_sprite
+				if (previous_direction.x == 1 && part_direction.y == 1) ||
+				   (previous_direction.y == -1 && part_direction.x == -1) {
+					rotation = 0
+				} else if (previous_direction.x == -1 && part_direction.y == -1) ||
+				   (previous_direction.y == 1 && part_direction.x == 1) {
+					rotation = 180
+				} else if (previous_direction.x == 1 && part_direction.y == -1) ||
+				   (previous_direction.y == 1 && part_direction.x == -1) {
+					rotation = 90
+				} else if (previous_direction.x == -1 && part_direction.y == 1) ||
+				   (previous_direction.y == -1 && part_direction.x == 1) {
+					rotation = 270
+				} else {
+					part_sprite = index %% 2 == 0 ? body1_sprite : body2_sprite
+					should_flip_vertically = alternate_slide
+				}
+			}
+
+			render_sprite(part_sprite, jormungandr[index], rotation, should_flip_vertically)
 		}
 
 		if game_over {
@@ -214,7 +261,10 @@ main :: proc() {
 		// NOTE: Substracting the initial length from the score
 		score := jormungandr_current_length - 2
 		score_str := fmt.ctprintf("Score: %v", score)
-		rl.DrawText(score_str, 4, CANVAS_SIZE - 14, 10, rl.GRAY)
+		rl.DrawText(score_str, 4, CANVAS_SIZE - 24, 12, rl.GRAY)
+
+		session_score_str := fmt.ctprintf("Session Score: %v", session_score)
+		rl.DrawText(session_score_str, 4, CANVAS_SIZE - 14, 10, rl.GRAY)
 
 		rl.EndMode2D()
 		rl.EndDrawing()
@@ -224,7 +274,9 @@ main :: proc() {
 
 	rl.UnloadTexture(food_sprite)
 	rl.UnloadTexture(head_sprite)
-	rl.UnloadTexture(body_sprite)
+	rl.UnloadTexture(body1_sprite)
+	rl.UnloadTexture(body2_sprite)
+	rl.UnloadTexture(left_down_corner_sprite)
 	rl.UnloadTexture(tail_sprite)
 
 	rl.UnloadSound(eating_sound)
