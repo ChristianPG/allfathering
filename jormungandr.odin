@@ -12,9 +12,9 @@ Food :: struct {
 }
 
 // Global Constants
-WINDOW_SIZE :: 500
+WINDOW_SIZE :: 1000
 GRID_WIDTH :: 20
-CELL_SIZE :: 16
+CELL_SIZE :: 32
 CANVAS_SIZE :: GRID_WIDTH * CELL_SIZE
 // NOTE: Decrease the tick rate to make Jormungandr faster
 TICK_RATE :: 0.1
@@ -221,6 +221,7 @@ main :: proc() {
 			if index == jormungandr_current_length - 1 {
 				part_direction = jormungandr[index - 1] - jormungandr[index]
 				part_sprite = tail_sprite
+				should_flip_vertically = alternate_slide
 			} else if index > 0 {
 				part_direction = jormungandr[index - 1] - jormungandr[index]
 			}
@@ -232,17 +233,17 @@ main :: proc() {
 				previous_direction := jormungandr[index] - jormungandr[index + 1]
 				should_flip_vertically = false
 				part_sprite = left_down_corner_sprite
-				if (previous_direction.x == 1 && part_direction.y == 1) ||
-				   (previous_direction.y == -1 && part_direction.x == -1) {
+				if (previous_direction.x >= 1 && part_direction.y >= 1) ||
+				   (previous_direction.y <= -1 && part_direction.x <= -1) {
 					rotation = 0
-				} else if (previous_direction.x == -1 && part_direction.y == -1) ||
-				   (previous_direction.y == 1 && part_direction.x == 1) {
+				} else if (previous_direction.x <= -1 && part_direction.y <= -1) ||
+				   (previous_direction.y >= 1 && part_direction.x >= 1) {
 					rotation = 180
-				} else if (previous_direction.x == 1 && part_direction.y == -1) ||
-				   (previous_direction.y == 1 && part_direction.x == -1) {
+				} else if (previous_direction.x >= 1 && part_direction.y <= -1) ||
+				   (previous_direction.y >= 1 && part_direction.x <= -1) {
 					rotation = 90
-				} else if (previous_direction.x == -1 && part_direction.y == 1) ||
-				   (previous_direction.y == -1 && part_direction.x == 1) {
+				} else if (previous_direction.x <= -1 && part_direction.y >= 1) ||
+				   (previous_direction.y <= -1 && part_direction.x >= 1) {
 					rotation = 270
 				} else {
 					part_sprite = index %% 2 == 0 ? body1_sprite : body2_sprite
