@@ -34,6 +34,14 @@ food: Food
 session_score: int
 alternate_slide: bool
 
+// NOTE: We need the directions just as a single units
+transform_direction :: proc(direction: Vec2i) -> Vec2i {
+	return {
+		direction.x >= 1 ? 1 : direction.x <= -1 ? -1 : 0,
+		direction.y >= 1 ? 1 : direction.y <= -1 ? -1 : 0,
+	}
+}
+
 render_sprite :: proc(
 	sprite: rl.Texture2D,
 	position: Vec2i,
@@ -228,23 +236,19 @@ main :: proc() {
 
 			rotation := math.atan2(f32(part_direction.y), f32(part_direction.x)) * math.DEG_PER_RAD
 
-			// TODO: Refactor the following logic to make it nicer
 			if 0 < index && index < (jormungandr_current_length - 1) {
 				previous_direction := jormungandr[index] - jormungandr[index + 1]
 				should_flip_vertically = false
 				part_sprite = left_down_corner_sprite
-				if (previous_direction.x >= 1 && part_direction.y >= 1) ||
-				   (previous_direction.y <= -1 && part_direction.x <= -1) {
-					rotation = 0
-				} else if (previous_direction.x <= -1 && part_direction.y <= -1) ||
-				   (previous_direction.y >= 1 && part_direction.x >= 1) {
-					rotation = 180
-				} else if (previous_direction.x >= 1 && part_direction.y <= -1) ||
-				   (previous_direction.y >= 1 && part_direction.x <= -1) {
-					rotation = 90
-				} else if (previous_direction.x <= -1 && part_direction.y >= 1) ||
-				   (previous_direction.y <= -1 && part_direction.x >= 1) {
-					rotation = 270
+				directions_difference :=
+					transform_direction(part_direction) - transform_direction(previous_direction)
+				middle_part_rotation :=
+					math.atan2(f32(directions_difference.y), f32(directions_difference.x)) *
+					math.DEG_PER_RAD
+
+				if middle_part_rotation != 0 {
+					// NOTE: The following number depends on the initial position of the sprite
+					rotation = middle_part_rotation - 135
 				} else {
 					part_sprite = index %% 2 == 0 ? body1_sprite : body2_sprite
 					should_flip_vertically = alternate_slide
