@@ -134,17 +134,24 @@ main :: proc() {
 				restart()
 			}
 		} else {
-			if (rl.IsKeyPressed(.UP) || rl.IsGamepadButtonPressed(0, .LEFT_FACE_UP)) &&
+			if (rl.IsKeyPressed(.UP) ||
+				   rl.IsGamepadButtonPressed(0, .LEFT_FACE_UP) ||
+				   rl.IsKeyPressed(.K)) &&
 			   move_direction != DOWN_DIRECTION {
 				move_direction = {0, -1}
-			} else if (rl.IsKeyPressed(.DOWN) || rl.IsGamepadButtonPressed(0, .LEFT_FACE_DOWN)) &&
+			} else if (rl.IsKeyPressed(.DOWN) ||
+				   rl.IsGamepadButtonPressed(0, .LEFT_FACE_DOWN) ||
+				   rl.IsKeyPressed(.J)) &&
 			   move_direction != UP_DIRECTION {
 				move_direction = {0, 1}
 			} else if (rl.IsKeyPressed(.RIGHT) ||
-				   rl.IsGamepadButtonPressed(0, .LEFT_FACE_RIGHT)) &&
+				   rl.IsGamepadButtonPressed(0, .LEFT_FACE_RIGHT) ||
+				   rl.IsKeyPressed(.L)) &&
 			   move_direction != LEFT_DIRECTION {
 				move_direction = {1, 0}
-			} else if (rl.IsKeyPressed(.LEFT) || rl.IsGamepadButtonPressed(0, .LEFT_FACE_LEFT)) &&
+			} else if (rl.IsKeyPressed(.LEFT) ||
+				   rl.IsGamepadButtonPressed(0, .LEFT_FACE_LEFT) ||
+				   rl.IsKeyPressed(.H)) &&
 			   move_direction != RIGHT_DIRECTION {
 				move_direction = {-1, 0}
 			}
