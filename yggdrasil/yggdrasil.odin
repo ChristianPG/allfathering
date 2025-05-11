@@ -11,19 +11,18 @@ main :: proc() {
 		defer os2.close(w)
 
 		// Rust-related apps
+		fmt.println("Installing Rust apps...")
 		p, _ = os2.process_start({command = {"cargo", "install", "bob-nvim"}, stdout = w})
 		p, _ = os2.process_start({command = {"bob", "install", "stable"}, stdout = w})
 		p, _ = os2.process_start({command = {"bob", "use", "stable"}, stdout = w})
 
-		// TODO: Conditionally execute the programs based on the OS
-		// Random CLI tools
-		// Linux
-		p, _ = os2.process_start({command = {"sudo", "apt-get", "install", "ripgrep"}, stdout = w})
-		// Mac
-		p, _ = os2.process_start({command = {"brew", "install", "ripgrep"}, stdout = w})
+		// Install other apps based on the OS used
+		fmt.println("Installing", ODIN_OS, "apps...")
+		_install_apps()
 	}
 
 	output, _ := os2.read_entire_file(r, context.temp_allocator)
 	_, _ = os2.process_wait(p)
 	fmt.print(string(output))
+
 }
