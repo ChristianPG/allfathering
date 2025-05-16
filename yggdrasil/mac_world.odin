@@ -12,7 +12,12 @@ _install_apps :: proc() {
 		defer os2.close(w)
 
 		// Random CLI tools
-		p, _ = os2.process_start({command = {"brew", "install", "ripgrep"}, stdout = w})
+		p, _ = os2.process_start(
+			{
+				command = {"brew", "install", "ripgrep", "fzf", "jq", "tmux", "stow", "odin"},
+				stdout = w,
+			},
+		)
 	}
 
 	output, _ := os2.read_entire_file(r, context.temp_allocator)

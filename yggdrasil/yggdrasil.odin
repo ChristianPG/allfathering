@@ -19,6 +19,20 @@ main :: proc() {
 		// Install other apps based on the OS used
 		fmt.println("Installing", ODIN_OS, "apps...")
 		_install_apps()
+
+		// Installing tpm for tmux
+		// TODO: Verify that the folder does not exist and fix the ~/ not being recognized as the home directory
+		// p, _ = os2.process_start(
+		// 	{
+		// 		command = {
+		// 			"git",
+		// 			"clone",
+		// 			"https://github.com/tmux-plugins/tpm",
+		// 			"~/.tmuxasdf/plugins/tpm",
+		// 		},
+		// 		stdout = w,
+		// 	},
+		// )
 	}
 
 	output, _ := os2.read_entire_file(r, context.temp_allocator)
