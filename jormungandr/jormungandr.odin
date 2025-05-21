@@ -115,15 +115,16 @@ main :: proc() {
 	restart()
 
 	// NOTE: This has to be done after initializing the window to avoid segmentation faults 
-	food_sprite := rl.LoadTexture("assets/food.png")
-	head_sprite := rl.LoadTexture("assets/head.png")
-	body1_sprite := rl.LoadTexture("assets/body1.png")
-	body2_sprite := rl.LoadTexture("assets/body2.png")
-	left_down_corner_sprite := rl.LoadTexture("assets/left-down-corner.png")
-	tail_sprite := rl.LoadTexture("assets/tail.png")
+	food_sprite := rl.LoadTexture("jormungandr/assets/food.png")
+	head_sprite := rl.LoadTexture("jormungandr/assets/head.png")
+	premeal_sprite := rl.LoadTexture("jormungandr/assets/premeal-head.png")
+	body1_sprite := rl.LoadTexture("jormungandr/assets/body1.png")
+	body2_sprite := rl.LoadTexture("jormungandr/assets/body2.png")
+	left_down_corner_sprite := rl.LoadTexture("jormungandr/assets/left-down-corner.png")
+	tail_sprite := rl.LoadTexture("jormungandr/assets/tail.png")
 
-	eating_sound := rl.LoadSound("assets/eat.wav")
-	crashing_sound := rl.LoadSound("assets/crash.wav")
+	eating_sound := rl.LoadSound("jormungandr/assets/eat.mp3")
+	crashing_sound := rl.LoadSound("jormungandr/assets/crash.mp3")
 
 	// NOTE: The game will keep running until the window is closed
 	for !rl.WindowShouldClose() {
@@ -229,7 +230,7 @@ main :: proc() {
 			// }
 			// rl.DrawRectangleRec(head_rect, index == 0 ? rl.RED : rl.WHITE)
 
-			part_sprite: rl.Texture2D = head_sprite
+			part_sprite: rl.Texture2D = food.eaten ? tail_sprite : head_sprite
 			should_flip_vertically := false
 			part_direction: Vec2i = jormungandr[index] - jormungandr[index + 1]
 
