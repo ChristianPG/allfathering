@@ -15,7 +15,18 @@ _install_apps :: proc() {
 		p, _ = os2.process_start({command = {"sudo", "apt", "update"}, stdout = w})
 		p, _ = os2.process_start(
 			{
-				command = {"sudo", "apt", "install", "ripgrep", "fzf", "jq", "tmux", "stow", "-y"},
+				command = {
+					"sudo",
+					"apt",
+					"install",
+					"ripgrep",
+					"fzf",
+					"jq",
+					"tmux",
+					"stow",
+					"solaar",
+					"-y",
+				},
 				stdout = w,
 			},
 		)
